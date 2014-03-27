@@ -1,0 +1,19 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <group android:id="@+id/group_popupmenu" >
+        <item
+            android:id="@+id/m_adv"
+            android:title="Advertise"/>
+        <item
+            android:id="@+id/m_unadv"
+            android:title="Unadvertise"/>
+        <item
+            android:id="@+id/m_sub"
+            android:title="Subcribe"/>
+        <item
+            android:id="@+id/m_unsub"
+            android:title="Unsubcribe"/>
+      
+    </group>
+
+</menu>
