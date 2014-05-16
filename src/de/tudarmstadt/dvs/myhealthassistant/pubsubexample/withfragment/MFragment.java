@@ -35,6 +35,7 @@ import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.notifications.Not
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.SensorReadingEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.cardiovascular.BloodPressureEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.cardiovascular.HRFidelityEvent;
+import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.cardiovascular.HRVariabilityEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.cardiovascular.HeartRateEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.AccSensorEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.AccSensorEventAnkle;
@@ -127,6 +128,7 @@ public class MFragment extends ListFragment {
 		mList.add(new MEvent("Blood Pressure",
 				SensorReadingEvent.BLOOD_PRESSURE));
 		mList.add(new MEvent("Heart Rate", SensorReadingEvent.HEART_RATE));
+		mList.add(new MEvent("Heart Rate Variability", SensorReadingEvent.HR_VARIABILITY));		
 		// mList.add(new MEvent("Accelerometer",
 		// SensorReadingEvent.ACCELEROMETER));
 		mList.add(new MEvent("Accelerometer Ankle",
@@ -179,6 +181,7 @@ public class MFragment extends ListFragment {
 		inFil.addAction(SensorReadingEvent.BODY_TEMPERATURE_IN_CELSIUS);
 		inFil.addAction(SensorReadingEvent.BODY_TEMPERATURE_IN_FAHRENHEIT);
 		inFil.addAction(SensorReadingEvent.HR_FIDELITY);
+		inFil.addAction(SensorReadingEvent.HR_VARIABILITY);
 		// inFil.addAction(SensorReadingEvent.ACCELEROMETER);
 		// inFil.addAction(SensorReadingEvent.ACCELEROMETER_KNEE);
 		// inFil.addAction(SensorReadingEvent.ACCELEROMETER_ANKLE);
@@ -269,7 +272,6 @@ public class MFragment extends ListFragment {
 			this.id = id;
 			this.sensorEvent = sensorEvent;
 			m_handler = new Handler();
-			onAdv = false;
 		}
 
 		public void onAdvEvent() {
@@ -280,9 +282,10 @@ public class MFragment extends ListFragment {
 					.getPackageName(), sensorEvent, "-");
 
 			// publish advertisement
-			publishManagemntEvent(adverisement);
 			onAdv = true;
+			publishManagemntEvent(adverisement);
 			mAdapter.notifyDataSetChanged();
+
 		}
 
 		public void onUnadvEvent() {
@@ -296,6 +299,7 @@ public class MFragment extends ListFragment {
 			// publish unadvertisement
 			onAdv = false;
 			publishManagemntEvent(unadverisement);
+			mAdapter.notifyDataSetChanged();
 		}
 
 		public void onSubEvent() {
@@ -307,6 +311,7 @@ public class MFragment extends ListFragment {
 			// publish subscription
 			publishManagemntEvent(sub);
 			onSub = true;
+			mAdapter.notifyDataSetChanged();
 		}
 
 		public void onUnsubEvent() {
@@ -318,6 +323,7 @@ public class MFragment extends ListFragment {
 			// publish un-subscription
 			publishManagemntEvent(unsub);
 			onSub = false;
+			mAdapter.notifyDataSetChanged();
 		}
 		
 		@Override
@@ -633,6 +639,10 @@ public class MFragment extends ListFragment {
 					int i = ((HRFidelityEvent) evt).getFidelity();
 					int j = ((HRFidelityEvent) evt).getValue();
 					text += i + "///" + j;
+				} else if (eventType.equals(SensorReadingEvent.HR_VARIABILITY)) {
+					long i = ((HRVariabilityEvent) evt).getHrV();
+					int j = ((HRVariabilityEvent) evt).getValue();
+					text += "HRV:" + i + "; HR:" + j;
 				} else if (eventType.equals(NotificationEvent.EVENT_TYPE)) {
 					if (((NotificationEvent) evt).severity == NotificationEvent.SEVERITY_CRITICAL) {
 						text += "Critical Hr!";
@@ -656,8 +666,10 @@ public class MFragment extends ListFragment {
 	 *            that should by displayed.
 	 */
 	private void setTextInSub(String text) {
-		if (rootView != null)
+		if (rootView != null){
 			((TextView) rootView.findViewById(R.id.subStatus)).setText(text);
+			((TextView) rootView.findViewById(R.id.subStatus)).setTextColor(Color.RED);
+		}
 	}
 
 	private void setTextInAdv(String text, int color) {

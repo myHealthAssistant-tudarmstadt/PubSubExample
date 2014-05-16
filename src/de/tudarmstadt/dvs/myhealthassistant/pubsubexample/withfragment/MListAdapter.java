@@ -24,6 +24,7 @@ import de.tudarmstadt.dvs.myhealthassistant.pubsubexample.R;
 import de.tudarmstadt.dvs.myhealthassistant.pubsubexample.withfragment.MFragment.MEvent;
 import android.R.color;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -74,6 +75,17 @@ public class MListAdapter extends ArrayAdapter<MEvent> {
 		viewHolder.mTitle = (TextView) view.findViewById(R.id.titleText);
 		viewHolder.mCheckbox = (CheckBox) view.findViewById(R.id.genSW);
 
+		if (item.isOnAdv()){
+			viewHolder.mTitle.setTextColor(Color.GREEN);
+		} else {
+			viewHolder.mTitle.setTextColor(Color.BLACK);
+		}
+		if (item.isOnSub()){
+			viewHolder.mTitle.setTextColor(Color.RED);
+		} else {
+			viewHolder.mTitle.setTextColor(Color.BLACK);
+		}
+		
 		viewHolder.mCheckbox.setEnabled(item.isOnAdv());
 		viewHolder.mCheckbox
 				.setOnCheckedChangeListener(new OnCheckedChangeListener() {
