@@ -14,10 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */ 
- 
- package de.tudarmstadt.dvs.myhealthassistant.pubsubexample.withfragment;
+ */
 
+package de.tudarmstadt.dvs.myhealthassistant.pubsubexample.withfragment;
+
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -37,8 +38,11 @@ import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.ca
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.cardiovascular.HRFidelityEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.cardiovascular.HRVariabilityEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.cardiovascular.HeartRateEvent;
+import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.AccDeviceSensorEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.AccSensorEvent;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.AccSensorEventAnkle;
+import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.AccSensorEventInG;
+import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.AccSensorEventKnee;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.BodyTemperatureEventInCelsius;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.BodyTemperatureEventInFahrenheit;
 import de.tudarmstadt.dvs.myhealthassistant.myhealthhub.events.sensorreadings.physical.WeightEventInKg;
@@ -64,18 +68,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 /**
- * This is an examples applications that shows the interaction with myHealhAssistant's myHealthHub. 
- * For event consumers, it explains:
- * - how to connect to the myHealthHub remote service
- * - how to (un-)subscribe to event types
- * - how to receive events
- * - how to receive information about event producer's connectivity
+ * This is an examples applications that shows the interaction with
+ * myHealhAssistant's myHealthHub. For event consumers, it explains: - how to
+ * connect to the myHealthHub remote service - how to (un-)subscribe to event
+ * types - how to receive events - how to receive information about event
+ * producer's connectivity
  * 
- * For event producers, it explains:
- * - how to advertise event types
- * - how to receive start/stop events telling whether the produced events are needed
- * - how to inform the middleware/applications about sensor connectivity
- *
+ * For event producers, it explains: - how to advertise event types - how to
+ * receive start/stop events telling whether the produced events are needed -
+ * how to inform the middleware/applications about sensor connectivity
+ * 
  * @author HieuHa
  * 
  */
@@ -85,7 +87,7 @@ public class MFragment extends ListFragment {
 	private static String TAG = MFragment.class.getSimpleName();
 
 	// shared preferences including sensor auto-connect information
-//	private SharedPreferences preferences;
+	// private SharedPreferences preferences;
 
 	private MListAdapter mAdapter;
 	// private MAbstractSensorListAdapter adapter;
@@ -128,12 +130,16 @@ public class MFragment extends ListFragment {
 		mList.add(new MEvent("Blood Pressure",
 				SensorReadingEvent.BLOOD_PRESSURE));
 		mList.add(new MEvent("Heart Rate", SensorReadingEvent.HEART_RATE));
-		mList.add(new MEvent("Heart Rate Variability", SensorReadingEvent.HR_VARIABILITY));		
+		mList.add(new MEvent("Heart Rate Variability",
+				SensorReadingEvent.HR_VARIABILITY));
 		// mList.add(new MEvent("Accelerometer",
 		// SensorReadingEvent.ACCELEROMETER));
-		mList.add(new MEvent("Accelerometer Ankle",
-				SensorReadingEvent.ACCELEROMETER_ANKLE));
-		mList.add(new MEvent("Activity Recognition", SensorReadingEvent.ACTIVITY_REHA));
+		mList.add(new MEvent("Accelerometer in m/s2",
+				SensorReadingEvent.ACCELEROMETER_ON_DEVICE));
+		mList.add(new MEvent("Accelerometer in G",
+				SensorReadingEvent.ACCELEROMETER_IN_G));
+		mList.add(new MEvent("Activity Recognition",
+				SensorReadingEvent.ACTIVITY_REHA));
 		// mList.add(new MEvent("Scale", "?"));
 		// mList.add(new MEvent("ECG To Heart Rate",
 		// SensorReadingEvent.ECG_STREAM));
@@ -149,8 +155,8 @@ public class MFragment extends ListFragment {
 		mAdapter.setData(mList);
 
 		/* Preferences */
-//		preferences = PreferenceManager.getDefaultSharedPreferences(this
-//				.getActivity());
+		// preferences = PreferenceManager.getDefaultSharedPreferences(this
+		// .getActivity());
 
 		registerForContextMenu(getListView());
 		setHasOptionsMenu(true);
@@ -182,9 +188,9 @@ public class MFragment extends ListFragment {
 		inFil.addAction(SensorReadingEvent.BODY_TEMPERATURE_IN_FAHRENHEIT);
 		inFil.addAction(SensorReadingEvent.HR_FIDELITY);
 		inFil.addAction(SensorReadingEvent.HR_VARIABILITY);
-		// inFil.addAction(SensorReadingEvent.ACCELEROMETER);
-		// inFil.addAction(SensorReadingEvent.ACCELEROMETER_KNEE);
-		// inFil.addAction(SensorReadingEvent.ACCELEROMETER_ANKLE);
+		inFil.addAction(SensorReadingEvent.ACCELEROMETER);
+		inFil.addAction(SensorReadingEvent.ACCELEROMETER_ON_DEVICE);
+		inFil.addAction(SensorReadingEvent.ACCELEROMETER_IN_G);
 		inFil.addAction(NotificationEvent.EVENT_TYPE);
 		// inFil.addAction(ActivityEventReha.EVENT_TYPE);
 		inFil.addAction(SensorReadingEvent.ACTIVITY_REHA);
@@ -225,6 +231,14 @@ public class MFragment extends ListFragment {
 	public void onDestroy() {
 		Log.d(TAG, "onStop");
 
+		for (MEvent e : mList) {
+			if (e.isOnGen())
+				e.stopGenEvent();
+
+			e.onUnsubEvent();
+			e.onUnadvEvent();
+		}
+		
 		if (connectedToHMM) {
 			getActivity().unbindService(myHealthAssistantRemoteConnection);
 			connectedToHMM = false;
@@ -233,15 +247,6 @@ public class MFragment extends ListFragment {
 		getActivity().stopService(myHealthHubIntent);
 		getActivity().unregisterReceiver(myReadingReceiver);
 		getActivity().unregisterReceiver(myManagementReceiver);
-
-		for (MEvent e : mList) {
-			if (e.isOnGen())
-				e.stopGenEvent();
-			else if (e.isOnSub())
-				e.onUnsubEvent();
-			else if (e.isOnAdv())
-				e.onUnadvEvent();
-		}
 
 		super.onDestroy();
 	}
@@ -282,8 +287,8 @@ public class MFragment extends ListFragment {
 					.getPackageName(), sensorEvent, "-");
 
 			// publish advertisement
-			onAdv = true;
 			publishManagemntEvent(adverisement);
+			onAdv = true;
 			mAdapter.notifyDataSetChanged();
 
 		}
@@ -297,8 +302,8 @@ public class MFragment extends ListFragment {
 					sensorEvent);
 
 			// publish unadvertisement
-			onAdv = false;
 			publishManagemntEvent(unadverisement);
+			onAdv = false;
 			mAdapter.notifyDataSetChanged();
 		}
 
@@ -325,7 +330,7 @@ public class MFragment extends ListFragment {
 			onSub = false;
 			mAdapter.notifyDataSetChanged();
 		}
-		
+
 		@Override
 		public String toString() {
 			return id;
@@ -376,22 +381,27 @@ public class MFragment extends ListFragment {
 								getRandomNumber(100, 175)));
 					} else if (sensorEvent
 							.equals(SensorReadingEvent.ACCELEROMETER_ANKLE)) {
-//						 { 156.7037f, 123.5630f, 118.4889f, 61.4074f, 82.3407f, 38.0741f }, // jogging
-//						 { 152.0734f, 125.1835f, 119.2844f, 11.7431f, 26.0550f, 11.0275f },	// walking
-//						 { 130.0000f, 99.0000f, 124.0000f, 1.2222f, 0.9444f, 0.9444f },		// sitting
-//						 { 152.0000f, 128.5263f, 121.2105f, 0.0526f, 0.9474f, 1.4737f },	// standing
+						// { 156.7037f, 123.5630f, 118.4889f, 61.4074f,
+						// 82.3407f, 38.0741f }, // jogging
+						// { 152.0734f, 125.1835f, 119.2844f, 11.7431f,
+						// 26.0550f, 11.0275f }, // walking
+						// { 130.0000f, 99.0000f, 124.0000f, 1.2222f, 0.9444f,
+						// 0.9444f }, // sitting
+						// { 152.0000f, 128.5263f, 121.2105f, 0.0526f, 0.9474f,
+						// 1.4737f }, // standing
 						ArrayList<int[]> dataCloud = new ArrayList<int[]>();
-						dataCloud.add(new int[]{156,123, 118, 61, 82, 38}); // jogging
-						dataCloud.add(new int[]{152, 125, 119, 11, 26, 11}); // walking
-						dataCloud.add(new int[]{130, 99, 124, 1, 0, 0 }); // sitting
-						dataCloud.add(new int[]{152, 128, 121, 0, 0, 1}); // standing
-						
-						int index = getRandomNumber(0,4);
+						dataCloud.add(new int[] { 156, 123, 118, 61, 82, 38 }); // jogging
+						dataCloud.add(new int[] { 152, 125, 119, 11, 26, 11 }); // walking
+						dataCloud.add(new int[] { 130, 99, 124, 1, 0, 0 }); // sitting
+						dataCloud.add(new int[] { 152, 128, 121, 0, 0, 1 }); // standing
+
+						int index = getRandomNumber(0, 4);
 						int[] entry = dataCloud.get(index);
 						publishReadingEvent(new AccSensorEventAnkle(TAG
 								+ eventCounter++, getTimestamp(), TAG,
-								"PubSubExampleASensor", getTimestamp(), entry[0],
-								entry[1], entry[2], entry[3], entry[4], entry[5], true, true, false));
+								"PubSubExampleASensor", getTimestamp(),
+								entry[0], entry[1], entry[2], entry[3],
+								entry[4], entry[5], true, true, false));
 					} else
 						return;
 
@@ -403,7 +413,7 @@ public class MFragment extends ListFragment {
 		}
 
 		public void stopGenEvent() {
-			if (m_handler != null && m_Generator != null){
+			if (m_handler != null && m_Generator != null) {
 				m_handler.removeCallbacks(m_Generator);
 			}
 			onGen = false;
@@ -412,12 +422,12 @@ public class MFragment extends ListFragment {
 		public boolean isOnAdv() {
 			return onAdv;
 		}
-		
-		public boolean isOnGen(){
+
+		public boolean isOnGen() {
 			return onGen;
 		}
-		
-		public boolean isOnSub(){
+
+		public boolean isOnSub() {
 			return onSub;
 		}
 
@@ -455,10 +465,12 @@ public class MFragment extends ListFragment {
 				.equals(SensorReadingEvent.BODY_TEMPERATURE_IN_FAHRENHEIT)) {
 			int i = ((BodyTemperatureEventInFahrenheit) evt).getTemperature();
 			text += i;
-		} else if (evt.getEventType().equals(SensorReadingEvent.ACCELEROMETER_ANKLE)) {
+		} else if (evt.getEventType().equals(
+				SensorReadingEvent.ACCELEROMETER_ANKLE)) {
 			AccSensorEvent acc = (AccSensorEvent) evt;
 			text += (acc.x_mean + ", " + acc.y_mean + ", " + acc.z_mean);
-		} else if (evt.getEventType().equals(SensorReadingEvent.ACCELEROMETER_KNEE)) {
+		} else if (evt.getEventType().equals(
+				SensorReadingEvent.ACCELEROMETER_KNEE)) {
 			AccSensorEvent acc = (AccSensorEvent) evt;
 			text += (acc.x_mean + ", " + acc.y_mean + ", " + acc.z_mean);
 		}
@@ -526,7 +538,7 @@ public class MFragment extends ListFragment {
 			Event evt = intent.getParcelableExtra(Event.PARCELABLE_EXTRA_EVENT);
 
 			// for debugging:
-			Log.e(TAG, "Received event of type: " + evt.getEventType());
+			Log.e(TAG, "ManagementEventReceiver: " + evt.getEventType());
 			String text = evt.getShortEventType();
 			boolean colorIsGreen = false;
 			// consume the individual event types
@@ -552,12 +564,18 @@ public class MFragment extends ListFragment {
 
 				// incoming start producer event telling that a specific event
 				// type is desired.
-			}else if (evt.getEventType().equals(SensorReadingEvent.ACCELEROMETER_KNEE)) {
+			} else if (evt.getEventType().equals(
+					SensorReadingEvent.ACCELEROMETER_KNEE)) {
 				AccSensorEvent acc = (AccSensorEvent) evt;
 				text += (acc.x_mean + ", " + acc.y_mean + ", " + acc.z_mean
-						+ " (" + acc.getTimestamp() + ")");
-				
-			}else if (evt.getEventType().equals(StartProducer.EVENT_TYPE)) {
+						+ " (" + acc.getTimestamp() + ")\n");
+
+			} else if (evt.getEventType().equals(
+					SensorReadingEvent.ACCELEROMETER_ANKLE)) {
+				AccSensorEvent acc = (AccSensorEvent) evt;
+				text += (acc.x_mean + ", " + acc.y_mean + ", " + acc.z_mean
+						+ " (" + acc.getTimestamp() + ")\n");
+			} else if (evt.getEventType().equals(StartProducer.EVENT_TYPE)) {
 				text += " start";
 				colorIsGreen = true;
 
@@ -591,31 +609,52 @@ public class MFragment extends ListFragment {
 
 			// for debugging:
 			Log.e(TAG, "ReadingEventReceiver of type: " + eventType);
-			Log.e(TAG, "ReadingEventReceiver with producerID: " + evt.getShortProducerID());
+			// Log.e(TAG,
+			// "ReadingEventReceiver with producerID: "
+			// + evt.getShortProducerID());
 
-			// event of type blood pressure
-			if (eventType.equals(BloodPressureEvent.EVENT_TYPE)) {
-				BloodPressureEvent bp = (BloodPressureEvent) evt;
-				setTextInSub(bp.getSystolic() + "/" + bp.getDiastolic() + " ("
-						+ bp.getTimestamp() + ")");
+			String text = evt.getTimestamp() + "--";
+			text += evt.getShortEventType() + ":  ";
 
-				// event of type HeartRate
-			} else if (eventType.equals(HeartRateEvent.EVENT_TYPE)) {
-				HeartRateEvent hr = (HeartRateEvent) evt;
-				setTextInSub(hr.getValue() + " (" + hr.getTimestamp() + ")");
+			if (eventType.equals(SensorReadingEvent.ACCELEROMETER_ON_DEVICE)) {
+				AccDeviceSensorEvent acc = (AccDeviceSensorEvent) evt;
+				String xValue = new DecimalFormat("#0.00").format(acc.x_mean);
+				String yValue = new DecimalFormat("#0.00").format(acc.y_mean);
+				String zValue = new DecimalFormat("#0.00").format(acc.z_mean);
+				text += (xValue + "; " + yValue + "; " + zValue);
+				setTextInGen(text);
 
-			} else if (eventType.equals(SensorReadingEvent.ACCELEROMETER_KNEE)) {
-				AccSensorEvent acc = (AccSensorEvent) evt;
-				setTextInSub(acc.x_mean + ", " + acc.y_mean + ", " + acc.z_mean
-						+ " (" + acc.getTimestamp() + ")");
 			} else {
-				String text = evt.getTimestamp() + "--";
-				text += evt.getShortEventType() + "--";
-				if (eventType.equals(SensorReadingEvent.WEIGHT_IN_KG)) {
+				if (eventType.equals(SensorReadingEvent.ACCELEROMETER_IN_G)) {
+					AccSensorEventInG acc = (AccSensorEventInG) evt;
+					String xValue = new DecimalFormat("#0.00").format(acc.x_mean);
+					String yValue = new DecimalFormat("#0.00").format(acc.y_mean);
+					String zValue = new DecimalFormat("#0.00").format(acc.z_mean);
+					text += (xValue + "; " + yValue + "; " + zValue);
+				} else
+
+				// event of type blood pressure
+				if (eventType.equals(BloodPressureEvent.EVENT_TYPE)) {
+					BloodPressureEvent bp = (BloodPressureEvent) evt;
+					text += (bp.getSystolic() + "/" + bp.getDiastolic());
+
+					// event of type HeartRate
+				} else if (eventType.equals(HeartRateEvent.EVENT_TYPE)) {
+					HeartRateEvent hr = (HeartRateEvent) evt;
+					text += (hr.getValue());
+
+				} else if (eventType
+						.equals(SensorReadingEvent.ACCELEROMETER_KNEE)) {
+					AccSensorEventKnee acc = (AccSensorEventKnee) evt;
+					text += (acc.x_mean + ", " + acc.y_mean + ", " + acc.z_mean);
+				} else if (eventType
+						.equals(SensorReadingEvent.ACCELEROMETER_ANKLE)) {
+					AccSensorEventAnkle acc = (AccSensorEventAnkle) evt;
+					text += (acc.x_mean + ", " + acc.y_mean + ", " + acc.z_mean);
+				} else if (eventType.equals(SensorReadingEvent.WEIGHT_IN_KG)) {
 					int i = ((WeightEventInKg) evt).getWeight();
 					text += i;
-				}
-				if (eventType.equals(SensorReadingEvent.WEIGHT_IN_LBS)) {
+				} else if (eventType.equals(SensorReadingEvent.WEIGHT_IN_LBS)) {
 					int i = ((WeightEventInLbs) evt).getWeight();
 					text += i;
 				} else if (eventType.equals(SensorReadingEvent.BLOOD_PRESSURE)) {
@@ -649,12 +688,16 @@ public class MFragment extends ListFragment {
 					} else
 						text += "normal!";
 				} else if (eventType.equals(SensorReadingEvent.ACTIVITY_REHA)) {
-					text = ((ActivityEventReha) evt).getTimeOfMeasurement() + "--" + ((ActivityEventReha) evt).getActivityName();
+					text = ((ActivityEventReha) evt).getTimeOfMeasurement()
+							+ "--"
+							+ ((ActivityEventReha) evt).getActivityName();
 				} else
 					Log.e(TAG, "reading unknown event:" + eventType);
+
 				setTextInSub(text);
 			}
 		}
+
 	};
 
 	/**
@@ -666,9 +709,10 @@ public class MFragment extends ListFragment {
 	 *            that should by displayed.
 	 */
 	private void setTextInSub(String text) {
-		if (rootView != null){
+		if (rootView != null) {
 			((TextView) rootView.findViewById(R.id.subStatus)).setText(text);
-			((TextView) rootView.findViewById(R.id.subStatus)).setTextColor(Color.RED);
+			((TextView) rootView.findViewById(R.id.subStatus))
+					.setTextColor(Color.RED);
 		}
 	}
 
@@ -687,13 +731,14 @@ public class MFragment extends ListFragment {
 	 * Returns the current time as "yyyy-MM-dd hh:mm:ss".
 	 * 
 	 * hh:mm:ss will give you 01:00:00 for 1 PM, use kk:mm:ss to get 13:00:00
+	 * 
 	 * @return timestamp
 	 */
 	private String getTimestamp() {
-//		return (String) android.text.format.DateFormat.format(
-//				"yyyy-MM-dd hh:mm:ss", new java.util.Date());
+		// return (String) android.text.format.DateFormat.format(
+		// "yyyy-MM-dd hh:mm:ss", new java.util.Date());
 		return (String) android.text.format.DateFormat.format(
-		"yyyy-MM-dd kk:mm:ss", new java.util.Date());
+				"yyyy-MM-dd kk:mm:ss", new java.util.Date());
 	}
 
 	/**

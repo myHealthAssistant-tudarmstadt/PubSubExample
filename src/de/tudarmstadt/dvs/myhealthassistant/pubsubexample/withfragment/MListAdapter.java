@@ -71,20 +71,18 @@ public class MListAdapter extends ArrayAdapter<MEvent> {
 		final MEvent item = getItem(position);
 
 		// Create the view holder
-		final ViewHolder viewHolder = new ViewHolder();
+		ViewHolder viewHolder = new ViewHolder();
 		viewHolder.mTitle = (TextView) view.findViewById(R.id.titleText);
 		viewHolder.mCheckbox = (CheckBox) view.findViewById(R.id.genSW);
 
 		if (item.isOnAdv()){
 			viewHolder.mTitle.setTextColor(Color.GREEN);
-		} else {
-			viewHolder.mTitle.setTextColor(Color.BLACK);
-		}
-		if (item.isOnSub()){
+		} else if (item.isOnSub()){
 			viewHolder.mTitle.setTextColor(Color.RED);
 		} else {
 			viewHolder.mTitle.setTextColor(Color.BLACK);
 		}
+		
 		
 		viewHolder.mCheckbox.setEnabled(item.isOnAdv());
 		viewHolder.mCheckbox
